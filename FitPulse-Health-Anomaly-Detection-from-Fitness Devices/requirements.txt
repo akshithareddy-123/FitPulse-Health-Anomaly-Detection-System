@@ -1,0 +1,27 @@
+# Core
+python
+requests
+pandas
+numpy
+
+# Streamlit Frontend
+streamlit
+plotly
+
+# FastAPI Backend
+fastapi
+uvicorn
+
+# ML / Analytics
+scikit-learn
+prophet
+tsfresh
+
+# Visualization
+matplotlib
+
+# PDF Report Generation
+reportlab
+
+# Tunneling (Colab)
+pyngrok

@@ -1,0 +1,15 @@
+# [theme]
+# base="light"
+# primaryColor="#E63946"
+# backgroundColor="#F1FAEE"
+# secondaryBackgroundColor="#A8DADC"
+# textColor="#1D3557"
+[theme]
+base="light"
+
+primaryColor="#1B9AAA"            # Medical teal
+backgroundColor="#F4FAF9"         # Soft clinical white
+secondaryBackgroundColor="#E0F2F1"
+textColor="#0F2F36"
+
+font="sans serif"
