@@ -16,22 +16,23 @@ import time
 import sys
 
 # Propagate secrets to os.environ so backend inherits it
-try:
-    if "OPENAI_API_KEY" in st.secrets:
-        os.environ["OPENAI_API_KEY"] = str(st.secrets["OPENAI_API_KEY"])
-except Exception:
-    pass
+for secret_key in ["OPENAI_API_KEY", "GEMINI_API_KEY"]:
+    try:
+        if secret_key in st.secrets:
+            os.environ[secret_key] = str(st.secrets[secret_key])
+    except Exception:
+        pass
 
-if not os.getenv("OPENAI_API_KEY"):
-    env_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
-    if os.path.exists(env_file):
-        try:
-            with open(env_file) as f:
-                for line in f:
-                    if line.startswith("OPENAI_API_KEY="):
-                        os.environ["OPENAI_API_KEY"] = line.strip().split("=", 1)[1]
-        except Exception:
-            pass
+    if not os.getenv(secret_key):
+        env_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+        if os.path.exists(env_file):
+            try:
+                with open(env_file) as f:
+                    for line in f:
+                        if line.startswith(f"{secret_key}="):
+                            os.environ[secret_key] = line.strip().split("=", 1)[1]
+            except Exception:
+                pass
 
 def _is_backend_alive(host="127.0.0.1", port=8003):
     try:

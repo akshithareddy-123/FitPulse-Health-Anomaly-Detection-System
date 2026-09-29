@@ -43,6 +43,8 @@ from typing import Optional
 from openai import OpenAI
 import os
 
+import requests
+
 def _load_env():
     for d in [os.path.dirname(os.path.abspath(__file__)), os.path.dirname(os.path.dirname(os.path.abspath(__file__)))]:
         for fname in [".env", os.path.join(".streamlit", "secrets.toml")]:
@@ -56,12 +58,52 @@ def _load_env():
                                 k, v = line.split("=", 1)
                                 k = k.strip()
                                 v = v.strip().strip("'\"")
-                                if k == "OPENAI_API_KEY" and v:
-                                    os.environ["OPENAI_API_KEY"] = v
+                                if k in ["OPENAI_API_KEY", "GEMINI_API_KEY"] and v:
+                                    os.environ[k] = v
                 except Exception:
                     pass
 
 _load_env()
+
+def call_gemini_api(prompt):
+    key = os.getenv("GEMINI_API_KEY", "")
+    if not key:
+        _load_env()
+        key = os.getenv("GEMINI_API_KEY", "")
+    if not key:
+        return None
+
+    # Try SDK first
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=key)
+        for mname in ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"]:
+            try:
+                model = genai.GenerativeModel(mname)
+                resp = model.generate_content(prompt)
+                if resp and resp.text:
+                    return resp.text.strip()
+            except Exception:
+                continue
+    except Exception as e:
+        print("Gemini SDK error:", e)
+
+    # Fallback to direct REST
+    try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={key}"
+        r = requests.post(
+            url,
+            json={"contents": [{"parts": [{"text": prompt}]}]},
+            headers={"Content-Type": "application/json"},
+            timeout=12
+        )
+        if r.status_code == 200:
+            data = r.json()
+            return data["candidates"][0]["content"]["parts"][0]["text"].strip()
+    except Exception as e:
+        print("Gemini REST error:", e)
+
+    return None
 
 def get_client():
     k = os.getenv("OPENAI_API_KEY", "")
@@ -840,6 +882,10 @@ def ai_generate_recommendation(issue, severity):
     Maximum 25 words.
     """
 
+    gemini_res = call_gemini_api(prompt)
+    if gemini_res:
+        return gemini_res
+
     try:
         response = get_client().chat.completions.create(
             model="gpt-4o-mini",
@@ -927,6 +973,10 @@ def anomaly_with_recommendations(user_id: str = "All"):
         Do not diagnose.
         Maximum 25 words.
         """
+
+        gemini_res = call_gemini_api(prompt)
+        if gemini_res:
+            return gemini_res
 
         try:
             res = get_client().chat.completions.create(
@@ -1508,6 +1558,12 @@ def ai_weight_plan(payload: dict = Body(...)):
         Short.
         """
 
+        # ---------- TRY GEMINI FIRST ----------
+        gemini_plan = call_gemini_api(prompt)
+        if gemini_plan:
+            PLAN_CACHE[key] = gemini_plan
+            return {"plan": gemini_plan}
+
         # ---------- OPENAI ----------
         res = get_client().chat.completions.create(
             model="gpt-4o-mini",
@@ -1568,6 +1624,11 @@ def ai_chat(payload: dict = Body(...)):
 
     Provide safe, helpful, non-diagnostic advice.
     """
+
+    # Try Gemini First
+    gemini_reply = call_gemini_api(prompt)
+    if gemini_reply:
+        return {"answer": gemini_reply}
 
     try:
         res = get_client().chat.completions.create(

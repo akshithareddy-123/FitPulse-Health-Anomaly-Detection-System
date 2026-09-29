@@ -24,3 +24,4 @@ reportlab
 
 # AI / LLM
 openai
+google-generativeai
