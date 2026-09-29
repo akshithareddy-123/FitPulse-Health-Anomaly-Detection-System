@@ -43,7 +43,15 @@ from typing import Optional
 from openai import OpenAI
 import os
 
-client = OpenAI(api_key="my_auth_token")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+client = OpenAI(api_key=OPENAI_API_KEY or "none")
+
+def get_client():
+    global client
+    k = os.getenv("OPENAI_API_KEY", "")
+    if k:
+        return OpenAI(api_key=k)
+    return client
 
 
 # ================= APP =================

@@ -15,6 +15,24 @@ import socket
 import time
 import sys
 
+# Propagate secrets to os.environ so backend inherits it
+try:
+    if "OPENAI_API_KEY" in st.secrets:
+        os.environ["OPENAI_API_KEY"] = str(st.secrets["OPENAI_API_KEY"])
+except Exception:
+    pass
+
+if not os.getenv("OPENAI_API_KEY"):
+    env_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    if os.path.exists(env_file):
+        try:
+            with open(env_file) as f:
+                for line in f:
+                    if line.startswith("OPENAI_API_KEY="):
+                        os.environ["OPENAI_API_KEY"] = line.strip().split("=", 1)[1]
+        except Exception:
+            pass
+
 def _is_backend_alive(host="127.0.0.1", port=8003):
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -32,6 +50,7 @@ def ensure_backend_started():
             subprocess.Popen(
                 cmd,
                 cwd=backend_dir,
+                env=os.environ.copy(),
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL
             )
