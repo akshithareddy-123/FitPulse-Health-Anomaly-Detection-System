@@ -15,7 +15,6 @@ python-multipart
 # ML / Analytics
 scikit-learn
 prophet
-tsfresh
 
 # Visualization
 matplotlib
