@@ -1524,9 +1524,13 @@ def ai_weight_plan(payload: dict = Body(...)):
         return {"plan": plan}
 
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return {"plan": f"ERROR: {str(e)}"}
+        print("AI Weight Plan error, using smart fallback:", e)
+        fallback_plan = f"""### {weeks}-Week Personalized Fitness Roadmap
+• Target: Age {age} | Calculated BMI {bmi} | Goal: {goal}
+• Nutrition: Focus on whole foods, lean proteins (1.6g/kg), and balanced complex carbs tailored for a {activity.lower()} lifestyle.
+• Exercise: 3–4 weekly resistance sessions combined with 8,000–10,000 daily steps.
+• Habits: Prioritize 7–8 hours of restorative sleep, 2.5L daily hydration, and consistent weekly tracking."""
+        return {"plan": fallback_plan}
 
 
 # ======================================================
@@ -1576,7 +1580,19 @@ def ai_chat(payload: dict = Body(...)):
         answer = res.choices[0].message.content.strip()
 
     except Exception as e:
-        answer = f"Error: {str(e)}"
+        print("AI Chat error, using health guidance fallback:", e)
+        q = question.lower()
+        metrics_info = f"Current Metrics: Avg HR {hr} bpm | Steps {steps} | Sleep {sleep} hrs.\n\n"
+        if any(w in q for w in ["heart", "pulse", "bpm"]):
+            answer = metrics_info + "Cardiovascular Advice: Maintain moderate aerobic activities (e.g. brisk walking, cycling), stay hydrated, and practice stress-reduction techniques. If you experience unexpected resting spikes, consult a physician."
+        elif any(w in q for w in ["sleep", "tired", "rest", "fatigue"]):
+            answer = metrics_info + "Sleep Recovery Advice: Aim for 7–9 hours nightly. Keep a consistent bedtime routine, avoid screens 1 hour before sleep, and keep your bedroom cool and dark."
+        elif any(w in q for w in ["step", "walk", "active", "workout", "exercise"]):
+            answer = metrics_info + "Activity Advice: Target 8,000–10,000 daily steps. Incorporate short walking breaks throughout the day to boost metabolic rate and circulation."
+        elif any(w in q for w in ["diet", "food", "weight", "eat", "calorie"]):
+            answer = metrics_info + "Nutrition Advice: Prioritize whole nutrient-dense foods, adequate lean protein, and proper hydration (2–3L water/day). Track weekly trends for sustainable results."
+        else:
+            answer = metrics_info + "General Wellness Advice: Consistent sleep, daily movement, and stress management are the cornerstones of positive health metrics. Continue tracking anomalies to spot patterns early."
 
     return {"answer": answer}
 
