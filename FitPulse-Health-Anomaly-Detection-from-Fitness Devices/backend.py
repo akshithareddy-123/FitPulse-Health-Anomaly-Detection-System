@@ -43,15 +43,32 @@ from typing import Optional
 from openai import OpenAI
 import os
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-client = OpenAI(api_key=OPENAI_API_KEY or "none")
+def _load_env():
+    for d in [os.path.dirname(os.path.abspath(__file__)), os.path.dirname(os.path.dirname(os.path.abspath(__file__)))]:
+        for fname in [".env", os.path.join(".streamlit", "secrets.toml")]:
+            fpath = os.path.join(d, fname)
+            if os.path.exists(fpath):
+                try:
+                    with open(fpath, encoding="utf-8") as f:
+                        for line in f:
+                            line = line.strip()
+                            if line and not line.startswith("#") and "=" in line:
+                                k, v = line.split("=", 1)
+                                k = k.strip()
+                                v = v.strip().strip("'\"")
+                                if k == "OPENAI_API_KEY" and v:
+                                    os.environ["OPENAI_API_KEY"] = v
+                except Exception:
+                    pass
+
+_load_env()
 
 def get_client():
-    global client
     k = os.getenv("OPENAI_API_KEY", "")
-    if k:
-        return OpenAI(api_key=k)
-    return client
+    if not k or k == "my_auth_token":
+        _load_env()
+        k = os.getenv("OPENAI_API_KEY", "")
+    return OpenAI(api_key=k if k and k != "my_auth_token" else "none")
 
 
 # ================= APP =================
@@ -824,7 +841,7 @@ def ai_generate_recommendation(issue, severity):
     """
 
     try:
-        response = client.chat.completions.create(
+        response = get_client().chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3
@@ -912,7 +929,7 @@ def anomaly_with_recommendations(user_id: str = "All"):
         """
 
         try:
-            res = client.chat.completions.create(
+            res = get_client().chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.3
@@ -1492,7 +1509,7 @@ def ai_weight_plan(payload: dict = Body(...)):
         """
 
         # ---------- OPENAI ----------
-        res = client.chat.completions.create(
+        res = get_client().chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.4,
@@ -1549,7 +1566,7 @@ def ai_chat(payload: dict = Body(...)):
     """
 
     try:
-        res = client.chat.completions.create(
+        res = get_client().chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
