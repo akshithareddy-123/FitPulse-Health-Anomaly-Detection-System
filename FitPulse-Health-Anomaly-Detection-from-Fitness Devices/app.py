@@ -7,11 +7,47 @@ from datetime import datetime
 import plotly.express as px
 import plotly.graph_objects as go
 
-# ================= CONFIG =================
-BACKEND = "http://localhost:8003"
-HEADERS = {"ngrok-skip-browser-warning": "true"}
-
 st.set_page_config(page_title="FitPulse Health Analytics Platform", layout="wide")
+
+# ================= AUTO START BACKEND =================
+import subprocess
+import socket
+import time
+import sys
+
+def _is_backend_alive(host="127.0.0.1", port=8003):
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(0.5)
+            return s.connect_ex((host, port)) == 0
+    except Exception:
+        return False
+
+@st.cache_resource
+def ensure_backend_started():
+    if not _is_backend_alive():
+        backend_dir = os.path.dirname(os.path.abspath(__file__))
+        cmd = [sys.executable, "-m", "uvicorn", "backend:app", "--host", "127.0.0.1", "--port", "8003"]
+        try:
+            subprocess.Popen(
+                cmd,
+                cwd=backend_dir,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+            for _ in range(30):
+                if _is_backend_alive():
+                    break
+                time.sleep(0.5)
+        except Exception as e:
+            print("Auto-start backend exception:", e)
+    return True
+
+ensure_backend_started()
+
+# ================= CONFIG =================
+BACKEND = os.getenv("BACKEND_URL", "http://127.0.0.1:8003")
+HEADERS = {"ngrok-skip-browser-warning": "true"}
 
 # ================= CUSTOM UI STYLE =================
 st.markdown("""
